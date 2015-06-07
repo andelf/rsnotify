@@ -1,5 +1,7 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate bitflags;
+#[cfg(target_os="macos")] extern crate fsevent_sys;
+extern crate libc;
 
 use std::sync::mpsc::Sender;
 #[cfg(test)] use std::sync::mpsc::channel;
@@ -8,6 +10,8 @@ pub use self::op::Op;
 pub use self::inotify::INotifyWatcher;
 #[cfg(feature="poll")]
 pub use self::poll::PollWatcher;
+#[cfg(target_os="macos")]
+pub use self::fsevent::FsEventWatcher;
 pub use self::dummy::DummyWatcher;
 use std::io;
 
@@ -17,6 +21,8 @@ use std::path::{Path, PathBuf};
 pub mod inotify;
 #[cfg(feature="poll")]
 pub mod poll;
+#[cfg(target_os="macos")]
+pub mod fsevent;
 pub mod dummy;
 
 pub mod op {
