@@ -43,7 +43,9 @@ pub struct Event {
 }
 
 unsafe impl Send for Event {}
+unsafe impl Sync for Event {}
 
+#[derive(Debug)]
 pub enum Error {
   Generic(String),
   Io(io::Error),
@@ -59,8 +61,9 @@ pub trait Watcher {
 }
 
 #[cfg(target_os = "linux")] pub type RecommendedWatcher = INotifyWatcher;
-#[cfg(all(feature="poll", not(any(target_os = "linux"))))] pub type RecommendedWatcher = PollWatcher;
-#[cfg(all(not(feature="poll"), not(any(target_os = "linux"))))] pub type RecommendedWatcher = DummyWatcher;
+#[cfg(target_os = "macos")] pub type RecommendedWatcher = FsEventWatcher;
+#[cfg(all(feature="poll", not(any(target_os = "linux", target_os = "macos"))))] pub type RecommendedWatcher = PollWatcher;
+#[cfg(all(not(feature="poll"), not(any(target_os = "linux", target_os = "macos"))))] pub type RecommendedWatcher = DummyWatcher;
 
 pub fn new(tx: Sender<Event>) -> Result<RecommendedWatcher, Error> {
   Watcher::new(tx)
