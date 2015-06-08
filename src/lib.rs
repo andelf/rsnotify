@@ -8,22 +8,18 @@ use std::sync::mpsc::Sender;
 pub use self::op::Op;
 #[cfg(target_os="linux")]
 pub use self::inotify::INotifyWatcher;
-#[cfg(feature="poll")]
-pub use self::poll::PollWatcher;
 #[cfg(target_os="macos")]
 pub use self::fsevent::FsEventWatcher;
-pub use self::dummy::DummyWatcher;
+pub use self::null::NullWatcher;
 use std::io;
 
 use std::path::{Path, PathBuf};
 
 #[cfg(target_os="linux")]
 pub mod inotify;
-#[cfg(feature="poll")]
-pub mod poll;
 #[cfg(target_os="macos")]
 pub mod fsevent;
-pub mod dummy;
+pub mod null;
 
 pub mod op {
   bitflags! {
@@ -43,7 +39,6 @@ pub struct Event {
 }
 
 unsafe impl Send for Event {}
-unsafe impl Sync for Event {}
 
 #[derive(Debug)]
 pub enum Error {
@@ -62,8 +57,7 @@ pub trait Watcher {
 
 #[cfg(target_os = "linux")] pub type RecommendedWatcher = INotifyWatcher;
 #[cfg(target_os = "macos")] pub type RecommendedWatcher = FsEventWatcher;
-#[cfg(all(feature="poll", not(any(target_os = "linux", target_os = "macos"))))] pub type RecommendedWatcher = PollWatcher;
-#[cfg(all(not(feature="poll"), not(any(target_os = "linux", target_os = "macos"))))] pub type RecommendedWatcher = DummyWatcher;
+#[cfg(not(any(target_os = "linux", target_os = "macos")))] pub type RecommendedWatcher = NullWatcher;
 
 pub fn new(tx: Sender<Event>) -> Result<RecommendedWatcher, Error> {
   Watcher::new(tx)
@@ -81,10 +75,20 @@ fn new_inotify() {
 }
 
 #[test]
-#[cfg(feature="poll")]
-fn new_poll() {
+#[cfg(target_os = "macos")]
+fn new_inotify() {
   let (tx, _) = channel();
-  let w: Result<PollWatcher, Error> = Watcher::new(tx);
+  let w: Result<FsEventWatcher, Error> = Watcher::new(tx);
+  match w {
+    Ok(_) => assert!(true),
+    Err(_) => assert!(false)
+  }
+}
+
+#[test]
+fn new_null() {
+  let (tx, _) = channel();
+  let w: Result<NullWatcher, Error> = Watcher::new(tx);
   match w {
     Ok(_) => assert!(true),
     Err(_) => assert!(false)
